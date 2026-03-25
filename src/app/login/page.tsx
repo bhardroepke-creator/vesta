@@ -1,0 +1,73 @@
+'use client';
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import styles from "./page.module.css";
+
+export default function Login() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email === 'admin@mail.ru' && password === '12345678') {
+      router.push('/dashboard');
+    } else {
+      alert('🔒 Неверный email или пароль! (Подсказка: используйте тестовые данные).');
+    }
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.glow} />
+      
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>С возвращением</h1>
+          <p className={styles.subtitle}>Войдите, чтобы управлять вашим ботом</p>
+        </div>
+
+        <form className={styles.form} onSubmit={handleLogin}>
+          <div className={styles.inputGroup}>
+            <label className={styles.label} htmlFor="email">Email</label>
+            <input 
+              type="email" 
+              id="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={styles.input} 
+              placeholder="name@example.com" 
+              required 
+            />
+          </div>
+          
+          <div className={styles.inputGroup}>
+            <label className={styles.label} htmlFor="password">Пароль</label>
+            <input 
+              type="password" 
+              id="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={styles.input} 
+              placeholder="••••••••" 
+              required 
+            />
+          </div>
+
+          <button type="submit" className={styles.submitBtn}>
+            Войти в панель
+          </button>
+        </form>
+
+        <div className={styles.footer}>
+          Нет аккаунта?
+          <Link href="/register" className={styles.link}>
+            Создать сейчас
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
