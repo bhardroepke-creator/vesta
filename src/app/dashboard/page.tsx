@@ -197,14 +197,27 @@ export default function Dashboard() {
                         <input className={styles.input} type="tel" placeholder="+7 (705) 000-00-00" />
                       </div>
                       {botPlatform === 'telegram' && (
-                        <div className={styles.inputGroupFull}>
-                          <label className={styles.label}>Токен Telegram-бота (от BotFather)</label>
+                        <div className={styles.inputGroupFull} style={{background: 'rgba(59, 130, 246, 0.1)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
+                          <h3 style={{color: '#60a5fa', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem'}}>
+                            <span>🤖</span> Как создать своего персонального бота?
+                          </h3>
+                          <div style={{fontSize: '0.9rem', color: '#e2e8f0', marginBottom: '1.5rem', lineHeight: '1.5'}}>
+                            <ol style={{paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', margin: 0}}>
+                              <li>Откройте Telegram и найдите <strong>@BotFather</strong> (бота с синей галочкой).</li>
+                              <li>Отправьте ему команду <strong>/newbot</strong>.</li>
+                              <li>Сначала он попросит Имя — введите красивое название на любом языке (например: <em>Студия Красоты Астана</em>).</li>
+                              <li>Затем он попросит Username (логин) — введите на английском, без пробелов, оканчивающееся на <em>_bot</em> (например: <em>astana_beauty_bot</em>).</li>
+                              <li>Затем он пришлет длинное сообщение успеха. Скопируйте длинный ключ (токен) вида <code>123456:ABC-DEF...</code> и вставьте ниже:</li>
+                            </ol>
+                          </div>
+                          <label className={styles.label} style={{color: '#fff', fontWeight: 600}}>🔑 Токен Telegram-бота (от BotFather)</label>
                           <input 
                             className={styles.input} 
                             type="password" 
-                            placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ" 
+                            placeholder="Например: 1234567890:AAH_xyzABC... (вставьте ключ сюда)" 
                             value={botToken}
                             onChange={(e) => setBotToken(e.target.value)}
+                            style={{borderColor: '#60a5fa', background: 'rgba(0,0,0,0.4)', color: '#bfdbfe'}}
                           />
                         </div>
                       )}
