@@ -21,6 +21,7 @@ export default function Dashboard() {
   // Приветственное сообщение и дизайн для предпросмотра
   const [greeting, setGreeting] = useState('');
   const [menuStyle, setMenuStyle] = useState('minimal');
+  const [botToken, setBotToken] = useState('');
 
   // Динамическое Портфолио
   const [portfolioItems, setPortfolioItems] = useState([
@@ -70,7 +71,9 @@ export default function Dashboard() {
           greeting_text: greeting,
           business_type: businessType,
           bot_menu_style: menuStyle,
-          schedule: JSON.stringify(schedule)
+          schedule: JSON.stringify(schedule),
+          bot_token_encrypted: botToken,
+          portfolio_items: JSON.stringify(portfolioItems)
         })
       });
 
@@ -196,7 +199,13 @@ export default function Dashboard() {
                       {botPlatform === 'telegram' && (
                         <div className={styles.inputGroupFull}>
                           <label className={styles.label}>Токен Telegram-бота (от BotFather)</label>
-                          <input className={styles.input} type="password" placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ" />
+                          <input 
+                            className={styles.input} 
+                            type="password" 
+                            placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ" 
+                            value={botToken}
+                            onChange={(e) => setBotToken(e.target.value)}
+                          />
                         </div>
                       )}
                       <div className={styles.inputGroupFull}>
