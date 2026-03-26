@@ -113,6 +113,19 @@ export default function Dashboard() {
     }
 
     try {
+      // 1. Гарантируем, что юзер существует в public.users (исправляет ошибку foreign key)
+      await fetch(`${supabaseUrl}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=ignore-duplicates'
+        },
+        body: JSON.stringify({ id: userId, email: 'admin@vesta.kz' })
+      });
+
+      // 2. Сохраняем настройки бота
       const isUpdate = !!settingsId;
       const url = isUpdate 
         ? `${supabaseUrl}/rest/v1/bot_settings?id=eq.${settingsId}` 
