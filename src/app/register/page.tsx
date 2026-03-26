@@ -34,9 +34,12 @@ export default function Register() {
       const authData = await authRes.json();
       if (!authRes.ok) throw new Error(authData.msg || authData.message || 'Ошибка регистрации');
 
-      // 2. Добавление записи в public.users
-      const userId = authData.user?.id;
+      // 2. В REST API Supabase Auth без сессии объект юзера может возвращаться напрямую как authData
+      const userId = authData.user?.id || authData.id;
+      const accessToken = authData.access_token;
+
       if (userId) {
+        // Добавление записи в public.users (основа)
         await fetch(`${supabaseUrl}/rest/v1/users`, {
           method: 'POST',
           headers: {
@@ -48,13 +51,19 @@ export default function Register() {
           body: JSON.stringify({ id: userId, email, business_name: businessName })
         });
 
-        // 3. Сохранение сессии локально
-        localStorage.setItem('vesta_token', authData.access_token);
-        localStorage.setItem('vesta_user_id', userId);
-        
-        router.push('/dashboard');
+        // 3. Проверка: нужно ли подтверждение почты?
+        if (accessToken) {
+          // Подтверждение почты ОТКЛЮЧЕНО (идеально для нас) - пускаем сразу в панель
+          localStorage.setItem('vesta_token', accessToken);
+          localStorage.setItem('vesta_user_id', userId);
+          router.push('/dashboard');
+        } else {
+          // Подтверждение почты ВКЛЮЧЕНО (дефолт Supabase)
+          alert('Регистрация прошла успешно! Но Supabase требует подтвердить вашу почту. Пожалуйста, зайдите в настройки Supabase и выключите тумблер "Confirm Email", как сказано в инструкции.');
+          router.push('/login');
+        }
       } else {
-        throw new Error('Пользователь не создан');
+        throw new Error('Пользователь не создан: БД не вернула ID');
       }
     } catch (err: any) {
       setError(err.message);

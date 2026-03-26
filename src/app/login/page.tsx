@@ -4,18 +4,35 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "./page.module.css";
+import { supabaseUrl, supabaseAnonKey } from '@/lib/supabaseClient';
 
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin@mail.ru' && password === '12345678') {
-      router.push('/dashboard');
-    } else {
-      alert('🔒 Неверный email или пароль! (Подсказка: используйте тестовые данные).');
+    try {
+      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Неверный email или пароль');
+      
+      if (data.user && data.access_token) {
+        localStorage.setItem('vesta_token', data.access_token);
+        localStorage.setItem('vesta_user_id', data.user.id);
+        router.push('/dashboard');
+      }
+    } catch(err: any) {
+      alert('Ошибка входа: ' + err.message);
     }
   };
 
