@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { supabaseUrl, supabaseAnonKey } from '@/lib/supabaseClient';
 
@@ -12,6 +13,9 @@ const DURATION_OPTIONS = [
 const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('builder');
   
   // Состояния для разветвления логики конфигуратора
@@ -27,6 +31,49 @@ export default function Dashboard() {
   const [portfolioItems, setPortfolioItems] = useState([
     { id: 1, name: '', price: '', duration: 'Нет', masters: '', description: '', image: '' }
   ]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('vesta_token');
+    const userId = localStorage.getItem('vesta_user_id');
+
+    if (!token || !userId) {
+      router.push('/login');
+      return;
+    }
+
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/bot_settings?user_id=eq.${userId}`, {
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+          const s = data[0];
+          setSettingsId(s.id);
+          if (s.bot_platform) setBotPlatform(s.bot_platform);
+          if (s.business_type) setBusinessType(s.business_type);
+          if (s.greeting_text) setGreeting(s.greeting_text);
+          if (s.bot_menu_style) setMenuStyle(s.bot_menu_style);
+          if (s.bot_token_encrypted) setBotToken(s.bot_token_encrypted);
+          
+          try {
+            if (s.schedule) setSchedule(JSON.parse(s.schedule));
+            if (s.portfolio_items) setPortfolioItems(JSON.parse(s.portfolio_items));
+          } catch(e) {}
+        }
+      } catch (e) {
+        console.error('Ошибка загрузки настроек', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [router]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, id: number) => {
     const file = e.target.files?.[0];
@@ -57,16 +104,32 @@ export default function Dashboard() {
   };
 
   const handleSaveToDB = async () => {
+    const token = localStorage.getItem('vesta_token');
+    const userId = localStorage.getItem('vesta_user_id');
+    if (!token || !userId) {
+      alert("Сессия истекла! Пожалуйста, войдите снова.");
+      router.push('/login');
+      return;
+    }
+
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/bot_settings`, {
-        method: 'POST',
+      const isUpdate = !!settingsId;
+      const url = isUpdate 
+        ? `${supabaseUrl}/rest/v1/bot_settings?id=eq.${settingsId}` 
+        : `${supabaseUrl}/rest/v1/bot_settings`;
+      
+      const method = isUpdate ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({ 
+          user_id: userId,
           bot_platform: botPlatform,
           greeting_text: greeting,
           business_type: businessType,
@@ -88,6 +151,10 @@ export default function Dashboard() {
     }
   };
 
+  if (loading) {
+    return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#60a5fa', fontSize: '1.2rem', fontWeight: 500}}>Загрузка рабочей среды...</div>;
+  }
+
   return (
     <div className={styles.container}>
       <aside className={styles.sidebar}>
@@ -103,6 +170,17 @@ export default function Dashboard() {
           onClick={() => setActiveTab('builder')}
         >
           ⚙️ Настройка бота
+        </div>
+        <div 
+          className={styles.navItem}
+          onClick={() => {
+            localStorage.removeItem('vesta_token');
+            localStorage.removeItem('vesta_user_id');
+            router.push('/login');
+          }}
+          style={{marginTop: 'auto', color: '#ef4444'}}
+        >
+          🚪 Выйти
         </div>
       </aside>
 
