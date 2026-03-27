@@ -27,10 +27,12 @@ export default function Dashboard() {
   const [menuStyle, setMenuStyle] = useState('minimal');
   const [botToken, setBotToken] = useState('');
 
-  // Динамическое Портфолио и Статистика
+  // Прайс-лист (Services) — без фото
   const [portfolioItems, setPortfolioItems] = useState([
-    { id: 1, name: '', price: '', duration: 'Нет', masters: '', description: '', image: '' }
+    { id: 1, name: '', price: '', duration: 'Нет', masters: '', description: '' }
   ]);
+  // Портфолио — только фото + подпись
+  const [portfolioPhotos, setPortfolioPhotos] = useState<{id: number, image: string, caption: string}[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [botUsername, setBotUsername] = useState<string>('');
 
@@ -62,7 +64,6 @@ export default function Dashboard() {
           if (s.bot_menu_style) setMenuStyle(s.bot_menu_style);
           if (s.bot_token_encrypted) {
             setBotToken(s.bot_token_encrypted);
-            // Получение имени бота (getMe)
             try {
               fetch(`https://api.telegram.org/bot${s.bot_token_encrypted}/getMe`)
                 .then(r => r.json())
@@ -75,6 +76,7 @@ export default function Dashboard() {
           try {
             if (s.schedule) setSchedule(JSON.parse(s.schedule));
             if (s.portfolio_items) setPortfolioItems(JSON.parse(s.portfolio_items));
+            if (s.portfolio_photos) setPortfolioPhotos(JSON.parse(s.portfolio_photos));
           } catch(e) {}
         }
 
@@ -174,7 +176,8 @@ export default function Dashboard() {
           bot_menu_style: menuStyle,
           schedule: JSON.stringify(schedule),
           bot_token_encrypted: botToken,
-          portfolio_items: JSON.stringify(portfolioItems)
+          portfolio_items: JSON.stringify(portfolioItems),
+          portfolio_photos: JSON.stringify(portfolioPhotos)
         })
       });
 
@@ -305,7 +308,6 @@ export default function Dashboard() {
                 <h1>Сборка бота</h1>
                 <p style={{color: 'var(--text-muted)', marginTop: '0.5rem'}}>Заполняйте шаг за шагом. Справа превью вашего бота.</p>
               </div>
-              <button className={styles.saveBtn} onClick={handleSaveToDB}>Сохранить и Запустить</button>
             </div>
 
             <div className={styles.builderArea}>
@@ -458,88 +460,117 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ШАГ 4: Портфолио / Прайс / Мастера */}
+                  {/* ⒊АГ 4: Прайс-лист BEZ фото */}
                   <div className={styles.section}>
-                    <div className={styles.stepBadge}>ШАГ 4</div>
-                    <h2 className={styles.sectionTitle}>📸 Портфолио, Прайс и Сотрудники</h2>
-                    <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Добавьте карточки услуг, их длительность и мастеров, которые их выполняют.</p>
+                    <div className={styles.stepBadge}>⒊АГ 4</div>
+                    <h2 className={styles.sectionTitle}>📋 Прайс-лист и Сотрудники</h2>
+                    <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Добавьте услуги, цены и мастеров. Фото загружайте отдельно — на ⒊АГЕ 5.</p>
                     
                     <div className={styles.portfolioList}>
                       {portfolioItems.map((item) => (
-                        <div className={styles.portfolioItem} key={item.id}>
-                          <label className={styles.imagePlaceholder} style={{ cursor: 'pointer', overflow: 'hidden' }}>
-                            {item.image ? (
-                              <img src={item.image} alt="preview" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '0.5rem'}} />
-                            ) : (
-                              <>
-                                <span style={{fontSize:'1.5rem'}}>+</span>
-                                <span style={{marginTop: '0.2rem'}}>Фото</span>
-                              </>
-                            )}
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              style={{ display: 'none' }} 
-                              onChange={(e) => handleImageUpload(e, item.id)} 
-                            />
-                          </label>
+                        <div key={item.id} style={{background: 'rgba(255,255,255,0.03)', border: '1px solid var(--card-border)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1rem'}}>
                           <div className={styles.formGrid}>
                             <div className={styles.inputGroupFull}>
                               <label className={styles.label}>Название ({businessType === 'beauty' ? 'Услуга' : 'Товар'})</label>
-                              <input className={styles.input} type="text" placeholder={businessType === 'beauty' ? 'Маникюр с дизайном' : 'Бенто-торт "Космос"'} />
+                              <input
+                                className={styles.input} type="text"
+                                placeholder={businessType === 'beauty' ? 'Маникюр с дизайном' : 'Бенто-торт «Космос»'}
+                                value={item.name}
+                                onChange={e => setPortfolioItems(prev => prev.map(p => p.id === item.id ? {...p, name: e.target.value} : p))}
+                              />
                             </div>
                             <div className={styles.inputGroup}>
                               <label className={styles.label}>Цена (₸)</label>
-                              <input className={styles.input} type="number" placeholder="5000" />
+                              <input
+                                className={styles.input} type="number" placeholder="5000"
+                                value={item.price}
+                                onChange={e => setPortfolioItems(prev => prev.map(p => p.id === item.id ? {...p, price: e.target.value} : p))}
+                              />
                             </div>
-                            {businessType === 'beauty' ? (
+                            {businessType === 'beauty' && (
                               <>
                                 <div className={styles.inputGroup}>
-                                  <label className={styles.label}>Длительность процедуры</label>
-                                  <select className={styles.input}>
+                                  <label className={styles.label}>Длительность</label>
+                                  <select className={styles.input} value={item.duration}
+                                    onChange={e => setPortfolioItems(prev => prev.map(p => p.id === item.id ? {...p, duration: e.target.value} : p))}>
                                     {DURATION_OPTIONS.map(opt => <option key={opt}>{opt}</option>)}
                                   </select>
                                 </div>
                                 <div className={styles.inputGroupFull}>
-                                  <label className={styles.label}>Выполняют мастера (имена через запятую)</label>
-                                  <input className={styles.input} type="text" placeholder="Например: Аня, Дильназ, Лена (оставьте пустым если мастер один)" />
-                                  <p style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>Если указано больше одного, бот предложит клиенту выбрать конкретного мастера.</p>
+                                  <label className={styles.label}>Мастера (через запятую)</label>
+                                  <input className={styles.input} type="text"
+                                    placeholder="Аня, Дильназ, Лена"
+                                    value={item.masters}
+                                    onChange={e => setPortfolioItems(prev => prev.map(p => p.id === item.id ? {...p, masters: e.target.value} : p))}
+                                  />
+                                  <p style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>Бот предложит выбор мастера при записи.</p>
                                 </div>
                               </>
-                            ) : (
+                            )}
+                            {businessType !== 'beauty' && (
                               <div className={styles.inputGroup}>
-                                <label className={styles.label}>Краткое описание</label>
-                                <input className={styles.input} type="text" placeholder="" />
+                                <label className={styles.label}>Описание</label>
+                                <input className={styles.input} type="text"
+                                  value={item.description}
+                                  onChange={e => setPortfolioItems(prev => prev.map(p => p.id === item.id ? {...p, description: e.target.value} : p))}
+                                />
                               </div>
                             )}
                           </div>
+                          <button
+                            style={{marginTop: '0.8rem', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.4rem', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.82rem'}}
+                            onClick={() => setPortfolioItems(prev => prev.filter(p => p.id !== item.id))}
+                          >❌ Удалить</button>
                         </div>
                       ))}
                     </div>
-                    <button className={styles.addBtn} onClick={addPortfolioItem}>+ Добавить еще позицию</button>
-
-                    {/* Доп. опции (Конструктор заказа) */}
-                    {businessType === 'bakery' && (
-                      <div className={styles.dynamicBlock} style={{marginTop: '2rem'}}>
-                        <h3 style={{marginBottom: '0.5rem', color: '#fff'}}>🧩 Конфигуратор заказа (Сборные опции)</h3>
-                        <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>
-                          Позвольте клиенту собирать заказ по шагам (например: Выбор бисквита ➔ Выбор начинки).
-                        </p>
-                        
-                        <div className={styles.serviceItem}>
-                          <div className={styles.serviceInfo}>
-                            <h4>Категория: 1. Выбор начинки</h4>
-                            <p style={{marginTop: '0.25rem'}}>Варианты: Сникерс (+0₸), Красный бархат (+500₸), Фисташка-малина (+1000₸)</p>
-                          </div>
-                        </div>
-                        <button className={styles.addBtn} style={{marginTop: '0.5rem'}}>+ Добавить новый шаг опций</button>
-                      </div>
-                    )}
+                    <button className={styles.addBtn} onClick={() => setPortfolioItems(prev => [...prev, {id: Date.now(), name: '', price: '', duration: 'Нет', masters: '', description: ''}])}>
+                      + Добавить услугу
+                    </button>
                   </div>
 
-                  {/* ШАГ 5: Оплата и Рейтинг */}
+                  {/* ⒊АГ 5: Портфолио ФОТО */}
                   <div className={styles.section}>
-                    <div className={styles.stepBadge}>ШАГ 5</div>
+                    <div className={styles.stepBadge}>⒊АГ 5</div>
+                    <h2 className={styles.sectionTitle}>📸 Портфолио (Фотографии работ)</h2>
+                    <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Загрузите фотографии ваших работ. Клиент сможет посмотреть их прямо в боте.</p>
+                    
+                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem'}}>
+                      {portfolioPhotos.map((photo) => (
+                        <div key={photo.id} style={{width: '150px'}}>
+                          <div style={{width: '150px', height: '120px', borderRadius: '0.75rem', overflow: 'hidden', position: 'relative', border: '2px solid var(--card-border)'}}>
+                            <img src={photo.image} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            <button onClick={() => setPortfolioPhotos(prev => prev.filter(p => p.id !== photo.id))}
+                              style={{position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: '#fff', cursor: 'pointer', fontSize: '12px'}}>×</button>
+                          </div>
+                          <input className={styles.input} type="text" placeholder="Подпись"
+                            value={photo.caption} style={{marginTop: '0.4rem', fontSize: '0.8rem'}}
+                            onChange={e => setPortfolioPhotos(prev => prev.map(p => p.id === photo.id ? {...p, caption: e.target.value} : p))}
+                          />
+                        </div>
+                      ))}
+                      <label style={{width: '150px', height: '120px', background: 'rgba(255,255,255,0.04)', border: '2px dashed var(--card-border)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)'}}>
+                        <span style={{fontSize: '2rem'}}>+</span>
+                        <span style={{fontSize: '0.8rem'}}>Добавить фото</span>
+                        <input type="file" accept="image/*" multiple style={{display: 'none'}}
+                          onChange={e => {
+                            const files = Array.from(e.target.files || []);
+                            files.forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = ev => {
+                                setPortfolioPhotos(prev => [...prev, {id: Date.now() + Math.random(), image: ev.target?.result as string, caption: ''}]);
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* ⒊АГ 6: Оплата и Рейтинг */}
+                  <div className={styles.section}>
+                    <div className={styles.stepBadge}>⒊АГ 6</div>
                     <h2 className={styles.sectionTitle}>💰 Оплата и Удержание клиентов</h2>
                     <h3 style={{color: '#fff', marginBottom: '1rem', fontSize: '1rem'}}>Выберите доступные способы оплаты:</h3>
                     
@@ -601,10 +632,10 @@ export default function Dashboard() {
 
                   </div>
 
-                  {/* ШАГ 6: Дизайн меню (Только для TG) */}
+                  {/* ⒊АГ 7: Дизайн меню (Только для TG) */}
                   {botPlatform === 'telegram' && (
                     <div className={styles.section}>
-                      <div className={styles.stepBadge}>ШАГ 6</div>
+                      <div className={styles.stepBadge}>⒊АГ 7</div>
                       <h2 className={styles.sectionTitle}>🎨 Дизайн меню в Telegram</h2>
                       <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Выберите стиль кнопок вашего меню (предпросмотр справа).</p>
 
@@ -627,6 +658,17 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
+
+                  {/* Кнопка СОХРАНИТЬ ВНИЗУ формы */}
+                  <div style={{padding: '2rem 0 3rem', display: 'flex', justifyContent: 'center'}}>
+                    <button
+                      className={styles.saveBtn}
+                      onClick={handleSaveToDB}
+                      style={{padding: '1rem 3rem', fontSize: '1.1rem', minWidth: '280px', borderRadius: '1rem', boxShadow: '0 0 30px rgba(124,58,237,0.4)'}}
+                    >
+                      🚀 Сохранить и Запустить бот
+                    </button>
+                  </div>
 
                 </div>
               </div>
