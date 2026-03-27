@@ -32,6 +32,7 @@ export default function Dashboard() {
     { id: 1, name: '', price: '', duration: 'Нет', masters: '', description: '', image: '' }
   ]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [botUsername, setBotUsername] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('vesta_token');
@@ -59,7 +60,17 @@ export default function Dashboard() {
           if (s.business_type) setBusinessType(s.business_type);
           if (s.greeting_text) setGreeting(s.greeting_text);
           if (s.bot_menu_style) setMenuStyle(s.bot_menu_style);
-          if (s.bot_token_encrypted) setBotToken(s.bot_token_encrypted);
+          if (s.bot_token_encrypted) {
+            setBotToken(s.bot_token_encrypted);
+            // Получение имени бота (getMe)
+            try {
+              fetch(`https://api.telegram.org/bot${s.bot_token_encrypted}/getMe`)
+                .then(r => r.json())
+                .then(tgData => {
+                  if (tgData.ok) setBotUsername(tgData.result.username);
+                }).catch(() => {});
+            } catch(e) {}
+          }
           
           try {
             if (s.schedule) setSchedule(JSON.parse(s.schedule));
@@ -172,7 +183,18 @@ export default function Dashboard() {
         throw new Error(errorData.message || 'Ошибка сети');
       }
 
-      alert('Успех! Настройки бота сохранены в вашей облачной БД Supabase!');
+      // 3. Автоматическая регистрация Webhook в Telegram (Магия SaaS)
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (backendUrl && botPlatform === 'telegram' && botToken) {
+        try {
+          const webhookUrl = `${backendUrl.replace(/\/$/, '')}/webhook/${botToken}`;
+          await fetch(`https://api.telegram.org/bot${botToken}/setWebhook?url=${webhookUrl}`);
+        } catch(e) {
+          console.error("Ошибка авто-регистрации вебхука", e);
+        }
+      }
+
+      alert('Успех! Настройки бота сохранены и активированы в вашей облачной БД Supabase!');
     } catch (err: any) {
       alert('Ошибка при сохранении: ' + err.message);
     }
@@ -215,7 +237,14 @@ export default function Dashboard() {
         {activeTab === 'my_bot' && (
           <div className={styles.fadeContainer}>
             <div className={styles.header}>
-              <h1>Мой Бот <span style={{fontSize: '1rem', fontWeight: 500, color: '#10b981', marginLeft: '1rem', border: '1px solid #10b981', padding: '0.2rem 0.5rem', borderRadius: '1rem'}}>● Работает</span></h1>
+              <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                <h1>Мой Бот <span style={{fontSize: '1rem', fontWeight: 500, color: '#10b981', border: '1px solid #10b981', padding: '0.2rem 0.5rem', borderRadius: '1rem'}}>● Работает</span></h1>
+              </div>
+              {botUsername && (
+                <a href={`https://t.me/${botUsername}`} target="_blank" rel="noreferrer" style={{color: '#60a5fa', textDecoration: 'none', background: 'rgba(96, 165, 250, 0.1)', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: 500}}>
+                  🤖 @{botUsername} ↗
+                </a>
+              )}
             </div>
             
             <div className={styles.section}>
